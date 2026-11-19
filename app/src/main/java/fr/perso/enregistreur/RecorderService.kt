@@ -116,6 +116,8 @@ class RecorderService : Service() {
         recorder = null
         // Supprime les fichiers vides (appel trop court ou échec).
         file?.let { if (it.exists() && it.length() < 2_000) it.delete() }
+        // Demande « Conserver / Supprimer » à la fin de l'appel.
+        file?.let { if (it.exists() && Prefs.askAfterCall(this)) ReviewActivity.prompt(this, it.nameWithoutExtension) }
         file = null
         if (speakerForced) {
             getSystemService(AudioManager::class.java).isSpeakerphoneOn = false

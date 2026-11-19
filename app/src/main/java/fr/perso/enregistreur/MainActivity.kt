@@ -77,6 +77,12 @@ class MainActivity : Activity() {
             setOnCheckedChangeListener { _, v -> Prefs.setSpeaker(this@MainActivity, v) }
         })
 
+        root.addView(Switch(this).apply {
+            text = "Demander « Conserver / Supprimer » à la fin de chaque appel"
+            isChecked = Prefs.askAfterCall(this@MainActivity)
+            setOnCheckedChangeListener { _, v -> Prefs.setAskAfterCall(this@MainActivity, v) }
+        })
+
         sourceBtn = Button(this).apply {
             setOnClickListener {
                 val next = (Prefs.sourceIndex(this@MainActivity) + 1) % Prefs.SOURCES.size

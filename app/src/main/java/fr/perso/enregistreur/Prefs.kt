@@ -23,6 +23,9 @@ object Prefs {
     fun speaker(c: Context) = sp(c).getBoolean("speaker", false)
     fun setSpeaker(c: Context, v: Boolean) = sp(c).edit().putBoolean("speaker", v).apply()
 
+    fun askAfterCall(c: Context) = sp(c).getBoolean("ask", true)
+    fun setAskAfterCall(c: Context, v: Boolean) = sp(c).edit().putBoolean("ask", v).apply()
+
     fun sourceIndex(c: Context) = sp(c).getInt("source", 0).coerceIn(0, SOURCES.lastIndex)
     fun setSourceIndex(c: Context, v: Int) = sp(c).edit().putInt("source", v).apply()
 

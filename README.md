@@ -25,6 +25,7 @@ Chaque modification poussée sur `main` lance une compilation (onglet **Actions*
 - Une **capture d'écran** de l'écran d'appel est prise automatiquement ~1,5 s après le décroché (Android 11 ou plus).
 - Appui long sur un appel : voir la capture, partager audio + capture, supprimer.
 - **Exporter la liste** produit un tableau CSV (Date ; Heure ; Sens ; Numéro ; Durée ; fichiers) à ouvrir dans Excel ou Google Sheets.
+- **À la fin de chaque appel**, une fenêtre propose « Conserver » ou « Supprimer » (avec aperçu de la capture et bouton Écouter). La suppression demande une confirmation. Retour = conserver. Une notification sert de secours si la fenêtre ne s'ouvre pas : sur Xiaomi/Poco, active **Autres autorisations → Afficher les fenêtres pop-up en arrière-plan**.
 - Après une mise à jour de l'appli, si les captures n'arrivent pas, désactive puis réactive le service d'accessibilité.
 
 ## Limites à connaître
