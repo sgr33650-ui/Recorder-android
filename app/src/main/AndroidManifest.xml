@@ -29,7 +29,6 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
-            android:taskAffinity=".fin_appel"
             android:theme="@android:style/Theme.Material.Light.Dialog" />
 
         <!-- Service d'accessibilité : détecte les appels et garde l'appli active -->
