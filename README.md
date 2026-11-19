@@ -33,7 +33,7 @@ Chaque modification poussée sur `main` lance une compilation (onglet **Actions*
 - Depuis Android 10, Android bloque l'enregistrement direct du son de l'appel par les applis tierces. Cette appli passe par le micro avec un service d'accessibilité (même méthode que Cube ACR). **Ta voix est bien captée ; celle de ton interlocuteur peut être faible**, selon le modèle.
 - Si l'interlocuteur est trop faible : active « Mettre le haut-parleur pendant l'appel », ou change la **Source audio** (le bouton fait défiler les choix) et refais un essai.
 - Sur les appels sortants, le numéro n'est pas toujours disponible (fichier nommé « inconnu »).
-- Les fichiers `.m4a` sont rangés dans `Android/data/fr.perso.enregistreur/files/Enregistrements/`. Ils sont supprimés si tu désinstalles l'appli : partage ceux à garder.
+- Les fichiers `.m4a` sont rangés dans `Android/data/fr.perso.recorder/files/Enregistrements/`. Ils sont supprimés si tu désinstalles l'appli : partage ceux à garder.
 
 ## Légalité
 

@@ -8,11 +8,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "fr.perso.enregistreur"
+        applicationId = "fr.perso.recorder"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     // Clé fixe : chaque nouvelle version peut s'installer par-dessus la précédente.
