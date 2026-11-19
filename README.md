@@ -1,14 +1,14 @@
-# Enregistreur d'appels (Android)
+# Appels Rec — enregistreur d'appels Android
 
 Appli personnelle qui enregistre automatiquement les appels entrants et sortants, testée pour les téléphones Xiaomi / Poco (HyperOS).
 
 ## Télécharger l'APK
 
-Chaque modification poussée sur `main` lance une compilation (onglet **Actions**). L'APK est ensuite publié dans **Releases → Dernière version → EnregistreurAppels.apk**.
+Chaque modification poussée sur `main` lance une compilation (onglet **Actions**). L'APK est ensuite publié dans **Releases → Dernière version → AppelsRec.apk**.
 
 ## Installation sur le Poco
 
-1. Télécharge `EnregistreurAppels.apk` depuis le téléphone et ouvre-le. Autorise « Installer des applis inconnues » pour ton navigateur si on te le demande.
+1. Télécharge `AppelsRec.apk` depuis le téléphone et ouvre-le. Autorise « Installer des applis inconnues » pour ton navigateur si on te le demande.
 2. Ouvre l'appli et suis les 3 boutons dans l'ordre :
    1. **Autoriser les permissions** (micro, téléphone, journal d'appels, notifications).
    2. **Activer le service d'accessibilité** : Applis téléchargées → Enregistreur d'appels → Activer.
