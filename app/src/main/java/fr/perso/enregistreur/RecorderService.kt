@@ -12,7 +12,6 @@ import android.media.AudioManager
 import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
-import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
 import java.io.File
@@ -25,40 +24,38 @@ import java.util.Date
  */
 class RecorderService : Service() {
 
-    private var telephony: TelephonyManager? = null
+    private var lastState: String? = null
     private var recorder: MediaRecorder? = null
     private var file: File? = null
     private var speakerForced = false
     private var incoming = false
     private var number: String? = null
 
-    @Suppress("DEPRECATION")
-    private val listener = object : PhoneStateListener() {
-        override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-            val nom = when (state) {
-                TelephonyManager.CALL_STATE_RINGING -> "SONNERIE"
-                TelephonyManager.CALL_STATE_OFFHOOK -> "DÉCROCHÉ"
-                else -> "RACCROCHÉ / REPOS"
+    /** Appelé par CallReceiver à chaque changement d'état. */
+    fun onCallState(state: String, phoneNumber: String?) {
+        val nom = when (state) {
+            TelephonyManager.EXTRA_STATE_RINGING -> "SONNERIE"
+            TelephonyManager.EXTRA_STATE_OFFHOOK -> "DÉCROCHÉ"
+            else -> "RACCROCHÉ / REPOS"
+        }
+        if (state != lastState) {
+            Journal.log(this, "État appel : $nom (numéro ${if (phoneNumber.isNullOrBlank()) "masqué" else "reçu"})")
+        }
+        lastState = state
+        if (!phoneNumber.isNullOrBlank()) number = phoneNumber
+        when (state) {
+            TelephonyManager.EXTRA_STATE_RINGING -> incoming = true
+            TelephonyManager.EXTRA_STATE_OFFHOOK -> {
+                if (recorder == null && Prefs.enabled(this)) {
+                    startRecording(
+                        Recording.baseName(Date(), if (incoming) "entrant" else "sortant", number)
+                    )
+                }
             }
-            Journal.log(this@RecorderService, "État appel : $nom (numéro ${if (phoneNumber.isNullOrBlank()) "masqué" else "reçu"})")
-            when (state) {
-                TelephonyManager.CALL_STATE_RINGING -> {
-                    incoming = true
-                    if (!phoneNumber.isNullOrBlank()) number = phoneNumber
-                }
-                TelephonyManager.CALL_STATE_OFFHOOK -> {
-                    if (!phoneNumber.isNullOrBlank()) number = phoneNumber
-                    if (recorder == null && Prefs.enabled(this@RecorderService)) {
-                        startRecording(
-                            Recording.baseName(Date(), if (incoming) "entrant" else "sortant", number)
-                        )
-                    }
-                }
-                TelephonyManager.CALL_STATE_IDLE -> {
-                    stopRecording()
-                    incoming = false
-                    number = null
-                }
+            TelephonyManager.EXTRA_STATE_IDLE -> {
+                stopRecording()
+                incoming = false
+                number = null
             }
         }
     }
@@ -70,14 +67,7 @@ class RecorderService : Service() {
         running = true
         Journal.log(this, "Service démarré")
         goForeground("Appels Rec actif", "Les appels seront enregistrés automatiquement")
-        telephony = getSystemService(TelephonyManager::class.java)
-        try {
-            @Suppress("DEPRECATION")
-            telephony?.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
-            Journal.log(this, "Écoute des appels activée")
-        } catch (e: Exception) {
-            Journal.log(this, "ERREUR écoute des appels", e)
-        }
+        instance = this
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -176,7 +166,7 @@ class RecorderService : Service() {
 
     @Suppress("DEPRECATION")
     override fun onDestroy() {
-        telephony?.listen(listener, PhoneStateListener.LISTEN_NONE)
+        instance = null
         stopRecording()
         running = false
         Journal.log(this, "Service arrêté")
@@ -188,6 +178,9 @@ class RecorderService : Service() {
         private const val CHANNEL = "surveillance"
         private const val NOTIF_ID = 42
         private const val TAG = "EnregAppels"
+
+        @Volatile var instance: RecorderService? = null
+            private set
 
         @Volatile var running = false
             private set
