@@ -35,6 +35,12 @@ class RecorderService : Service() {
     @Suppress("DEPRECATION")
     private val listener = object : PhoneStateListener() {
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+            val nom = when (state) {
+                TelephonyManager.CALL_STATE_RINGING -> "SONNERIE"
+                TelephonyManager.CALL_STATE_OFFHOOK -> "DÉCROCHÉ"
+                else -> "RACCROCHÉ / REPOS"
+            }
+            Journal.log(this@RecorderService, "État appel : $nom (numéro ${if (phoneNumber.isNullOrBlank()) "masqué" else "reçu"})")
             when (state) {
                 TelephonyManager.CALL_STATE_RINGING -> {
                     incoming = true
@@ -62,13 +68,15 @@ class RecorderService : Service() {
     override fun onCreate() {
         super.onCreate()
         running = true
+        Journal.log(this, "Service démarré")
         goForeground("Appels Rec actif", "Les appels seront enregistrés automatiquement")
         telephony = getSystemService(TelephonyManager::class.java)
         try {
             @Suppress("DEPRECATION")
             telephony?.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Permission téléphone manquante", e)
+            Journal.log(this, "Écoute des appels activée")
+        } catch (e: Exception) {
+            Journal.log(this, "ERREUR écoute des appels", e)
         }
     }
 
@@ -129,14 +137,15 @@ class RecorderService : Service() {
                 recorder = r
                 file = out
                 goForeground("🔴 Appel en cours d'enregistrement", Prefs.SOURCES[idx].second)
+                Journal.log(this, "Enregistrement démarré, source : ${Prefs.SOURCES[idx].second}")
                 return
             } catch (e: Exception) {
-                Log.w(TAG, "Source ${Prefs.SOURCES[idx].second} refusée", e)
+                Journal.log(this, "Source refusée : ${Prefs.SOURCES[idx].second}", e)
                 r.release()
                 out.delete()
             }
         }
-        Log.e(TAG, "Aucune source audio disponible")
+        Journal.log(this, "ÉCHEC : aucune source audio n'a fonctionné")
     }
 
     private fun newRecorder(): MediaRecorder =
@@ -146,7 +155,10 @@ class RecorderService : Service() {
     @Suppress("DEPRECATION")
     private fun stopRecording() {
         val r = recorder ?: return
-        try { r.stop() } catch (_: Exception) { file?.delete() }
+        try { r.stop() } catch (e: Exception) {
+            Journal.log(this, "Erreur à l'arrêt (fichier vide ?)", e)
+            file?.delete()
+        }
         r.release()
         recorder = null
         if (speakerForced) {
@@ -154,7 +166,8 @@ class RecorderService : Service() {
             speakerForced = false
         }
         file?.let {
-            if (it.exists() && it.length() < 2_000) it.delete()
+            Journal.log(this, "Enregistrement arrêté : ${if (it.exists()) "${it.length() / 1024} Ko" else "aucun fichier"}")
+            if (it.exists() && it.length() < 2_000) { it.delete(); Journal.log(this, "Fichier trop petit, supprimé") }
             if (it.exists() && Prefs.askAfterCall(this)) ReviewActivity.prompt(this, it.nameWithoutExtension)
         }
         file = null
@@ -166,6 +179,7 @@ class RecorderService : Service() {
         telephony?.listen(listener, PhoneStateListener.LISTEN_NONE)
         stopRecording()
         running = false
+        Journal.log(this, "Service arrêté")
         super.onDestroy()
     }
 

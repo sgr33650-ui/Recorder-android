@@ -27,6 +27,7 @@ import java.io.File
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
+    private lateinit var journal: TextView
     private lateinit var sourceBtn: Button
     private lateinit var list: ListView
     private var items: List<Recording> = emptyList()
@@ -98,6 +99,33 @@ class MainActivity : Activity() {
         })
 
         root.addView(TextView(this).apply {
+            text = "Journal de diagnostic"
+            setTypeface(typeface, Typeface.BOLD)
+            setPadding(0, pad, 0, pad / 4)
+        })
+        journal = TextView(this).apply {
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            maxLines = 8
+            setTextIsSelectable(true)
+        }
+        root.addView(journal)
+        val jrow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        jrow.addView(Button(this).apply {
+            text = "Copier le journal"
+            setOnClickListener {
+                val cm = getSystemService(android.content.ClipboardManager::class.java)
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("journal", Journal.read(this@MainActivity)))
+                Toast.makeText(this@MainActivity, "Journal copié : colle-le à Claude", Toast.LENGTH_SHORT).show()
+            }
+        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        jrow.addView(Button(this).apply {
+            text = "Test micro 5 s"
+            setOnClickListener { micTest() }
+        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        root.addView(jrow)
+
+        root.addView(TextView(this).apply {
             text = "Enregistrements (appui : lire/arrêter, appui long : partage, suppression)"
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, pad, 0, pad / 2)
@@ -114,6 +142,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        journal.text = Journal.read(this)
         syncService()
         refreshStatus()
         refreshList()
@@ -138,9 +167,37 @@ class MainActivity : Activity() {
         }
     }
 
+    /** Enregistre 5 s hors appel pour vérifier que le micro fonctionne. */
+    private fun micTest() {
+        val f = File(cacheDir, "test.m4a")
+        try {
+            val r = if (Build.VERSION.SDK_INT >= 31) android.media.MediaRecorder(this)
+                    else @Suppress("DEPRECATION") android.media.MediaRecorder()
+            r.setAudioSource(Prefs.SOURCES[Prefs.sourceIndex(this)].first)
+            r.setOutputFormat(android.media.MediaRecorder.OutputFormat.MPEG_4)
+            r.setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AAC)
+            r.setOutputFile(f.absolutePath)
+            r.prepare(); r.start()
+            Toast.makeText(this, "Parle… (5 s)", Toast.LENGTH_SHORT).show()
+            journal.postDelayed({
+                try { r.stop() } catch (_: Exception) {}
+                r.release()
+                Journal.log(this, "Test micro hors appel : ${f.length() / 1024} Ko")
+                journal.text = Journal.read(this)
+                togglePlay(f)
+            }, 5000)
+        } catch (e: Exception) {
+            Journal.log(this, "Test micro ÉCHEC", e)
+            journal.text = Journal.read(this)
+        }
+    }
+
     /** Démarre ou arrête le service permanent selon le réglage (l'appli est au premier plan ici). */
     private fun syncService() {
         val perms = permissions.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+        if (!perms) Journal.log(this, "Permissions manquantes : " +
+            permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+                .joinToString { it.substringAfterLast('.') })
         try {
             if (Prefs.enabled(this) && perms) {
                 if (!RecorderService.running) RecorderService.start(this)
@@ -148,9 +205,10 @@ class MainActivity : Activity() {
                 RecorderService.stop(this)
             }
         } catch (e: Exception) {
+            Journal.log(this, "Démarrage du service impossible", e)
             Toast.makeText(this, "Démarrage impossible : ${e.message}", Toast.LENGTH_LONG).show()
         }
-        status.postDelayed({ refreshStatus() }, 500)
+        status.postDelayed({ refreshStatus(); journal.text = Journal.read(this) }, 800)
     }
 
     private fun askBattery() {
