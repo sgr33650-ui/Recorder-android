@@ -50,7 +50,7 @@ class Recording(val audio: File) {
         }
 
         fun all(c: Context): List<Recording> =
-            Prefs.folder(c).listFiles { f -> f.isFile && f.extension == "m4a" }
+            Prefs.folder(c).listFiles { f -> f.isFile && (f.extension == "wav" || f.extension == "m4a") }
                 ?.map { Recording(it) }
                 ?.sortedByDescending { it.audio.lastModified() }
                 ?: emptyList()

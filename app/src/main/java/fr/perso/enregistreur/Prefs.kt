@@ -9,8 +9,10 @@ object Prefs {
 
     /** Sources audio proposées, dans l'ordre d'essai. */
     val SOURCES = listOf(
-        MediaRecorder.AudioSource.VOICE_RECOGNITION to "Reconnaissance vocale (recommandé)",
         MediaRecorder.AudioSource.MIC to "Micro",
+        MediaRecorder.AudioSource.CAMCORDER to "Caméra (sans filtrage)",
+        MediaRecorder.AudioSource.UNPROCESSED to "Brut (sans filtrage)",
+        MediaRecorder.AudioSource.VOICE_RECOGNITION to "Reconnaissance vocale",
         MediaRecorder.AudioSource.VOICE_COMMUNICATION to "Communication vocale",
         MediaRecorder.AudioSource.VOICE_CALL to "Appel (rooté / constructeur)",
     )

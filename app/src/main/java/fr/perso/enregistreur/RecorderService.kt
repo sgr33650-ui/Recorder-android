@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioManager
-import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import android.telephony.TelephonyManager
@@ -25,7 +24,7 @@ import java.util.Date
 class RecorderService : Service() {
 
     private var lastState: String? = null
-    private var recorder: MediaRecorder? = null
+    private var recorder: WavRecorder? = null
     private var file: File? = null
     private var speakerForced = false
     private var incoming = false
@@ -110,20 +109,12 @@ class RecorderService : Service() {
             }
         }
 
-        val out = File(Prefs.folder(this), "$base.m4a")
+        val out = File(Prefs.folder(this), "$base.wav")
         val chosen = Prefs.sourceIndex(this)
         val order = listOf(chosen) + Prefs.SOURCES.indices.filter { it != chosen }
         for (idx in order) {
-            val r = newRecorder()
-            try {
-                r.setAudioSource(Prefs.SOURCES[idx].first)
-                r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                r.setAudioEncodingBitRate(64_000)
-                r.setAudioSamplingRate(44_100)
-                r.setOutputFile(out.absolutePath)
-                r.prepare()
-                r.start()
+            val r = WavRecorder(this)
+            if (r.start(Prefs.SOURCES[idx].first, out)) {
                 recorder = r
                 file = out
                 goForeground("🔴 Appel en cours d'enregistrement", Prefs.SOURCES[idx].second)
@@ -132,27 +123,17 @@ class RecorderService : Service() {
                     android.os.Handler(mainLooper).postDelayed({ take(base) }, 1500)
                 }
                 return
-            } catch (e: Exception) {
-                Journal.log(this, "Source refusée : ${Prefs.SOURCES[idx].second}", e)
-                r.release()
+            } else {
                 out.delete()
             }
         }
         Journal.log(this, "ÉCHEC : aucune source audio n'a fonctionné")
     }
 
-    private fun newRecorder(): MediaRecorder =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(this)
-        else @Suppress("DEPRECATION") MediaRecorder()
-
     @Suppress("DEPRECATION")
     private fun stopRecording() {
         val r = recorder ?: return
-        try { r.stop() } catch (e: Exception) {
-            Journal.log(this, "Erreur à l'arrêt (fichier vide ?)", e)
-            file?.delete()
-        }
-        r.release()
+        r.stop()
         recorder = null
         if (speakerForced) {
             getSystemService(AudioManager::class.java).isSpeakerphoneOn = false

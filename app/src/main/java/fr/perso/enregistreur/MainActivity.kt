@@ -332,7 +332,7 @@ class MainActivity : Activity() {
         try {
             startActivity(Intent.createChooser(
                 Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri(r.audio), "audio/mp4")
+                    .setDataAndType(uri(r.audio), if (r.audio.extension == "wav") "audio/wav" else "audio/mp4")
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
                 "Écouter avec…"))
         } catch (e: Exception) {
