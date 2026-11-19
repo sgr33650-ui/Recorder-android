@@ -28,6 +28,12 @@ Chaque modification poussée sur `main` lance une compilation (onglet **Actions*
 - **À la fin de chaque appel**, une fenêtre propose « Conserver » ou « Supprimer » (avec aperçu de la capture et bouton Écouter). La suppression demande une confirmation. Retour = conserver. Une notification sert de secours si la fenêtre ne s'ouvre pas : sur Xiaomi/Poco, active **Autres autorisations → Afficher les fenêtres pop-up en arrière-plan**.
 - Après une mise à jour de l'appli, si les captures n'arrivent pas, désactive puis réactive le service d'accessibilité.
 
+## Version 2.0 (sans accessibilité)
+
+Le Poco refuse d'installer une appli hors Play Store qui déclare un service d'accessibilité. Depuis la 2.0, l'appli n'en utilise plus : un service permanent (notification « Appels Rec actif ») écoute les appels.
+- Ouvre l'appli une fois pour démarrer la surveillance, et à nouveau après chaque redémarrage du téléphone (une notification te le rappelle).
+- La capture d'écran automatique n'est plus possible sans accessibilité.
+
 ## Limites à connaître
 
 - Depuis Android 10, Android bloque l'enregistrement direct du son de l'appel par les applis tierces. Cette appli passe par le micro avec un service d'accessibilité (même méthode que Cube ACR). **Ta voix est bien captée ; celle de ton interlocuteur peut être faible**, selon le modèle.

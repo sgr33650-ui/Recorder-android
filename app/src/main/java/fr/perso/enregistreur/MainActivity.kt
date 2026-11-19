@@ -58,18 +58,18 @@ class MainActivity : Activity() {
             setOnClickListener { requestPermissions(permissions, 1) }
         })
         root.addView(Button(this).apply {
-            text = "2. Activer le service d'accessibilité"
-            setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        })
-        root.addView(Button(this).apply {
-            text = "3. Désactiver l'optimisation batterie"
+            text = "2. Désactiver l'optimisation batterie"
             setOnClickListener { askBattery() }
         })
 
         root.addView(Switch(this).apply {
             text = "Enregistrement automatique des appels"
             isChecked = Prefs.enabled(this@MainActivity)
-            setOnCheckedChangeListener { _, v -> Prefs.setEnabled(this@MainActivity, v) }
+            setOnCheckedChangeListener { _, v ->
+                Prefs.setEnabled(this@MainActivity, v)
+                syncService()
+                refreshStatus()
+            }
         })
         root.addView(Switch(this).apply {
             text = "Mettre le haut-parleur pendant l'appel (capte mieux l'interlocuteur)"
@@ -98,7 +98,7 @@ class MainActivity : Activity() {
         })
 
         root.addView(TextView(this).apply {
-            text = "Enregistrements (appui : lire/arrêter, appui long : capture, partage, suppression)"
+            text = "Enregistrements (appui : lire/arrêter, appui long : partage, suppression)"
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, pad, 0, pad / 2)
         })
@@ -114,12 +114,14 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        syncService()
         refreshStatus()
         refreshList()
     }
 
     override fun onRequestPermissionsResult(rc: Int, p: Array<out String>, r: IntArray) {
         super.onRequestPermissionsResult(rc, p, r)
+        syncService()
         refreshStatus()
     }
 
@@ -129,20 +131,26 @@ class MainActivity : Activity() {
 
     private fun refreshStatus() {
         val perms = permissions.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
-        val access = accessibilityOn()
         status.text = buildString {
             append(if (perms) "✅ Permissions accordées\n" else "❌ Permissions manquantes\n")
-            append(if (access) "✅ Service d'accessibilité actif" else "❌ Service d'accessibilité inactif")
-            if (perms && access) append("\n\nPrêt : les prochains appels seront enregistrés.")
+            append(if (RecorderService.running) "✅ Surveillance des appels active" else "❌ Surveillance arrêtée")
+            if (perms && RecorderService.running) append("\n\nPrêt : les prochains appels seront enregistrés.")
         }
     }
 
-    private fun accessibilityOn(): Boolean {
-        val enabled = Settings.Secure.getString(
-            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-        return enabled.contains("$packageName/") &&
-            enabled.contains(CallAccessibilityService::class.java.simpleName)
+    /** Démarre ou arrête le service permanent selon le réglage (l'appli est au premier plan ici). */
+    private fun syncService() {
+        val perms = permissions.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+        try {
+            if (Prefs.enabled(this) && perms) {
+                if (!RecorderService.running) RecorderService.start(this)
+            } else if (RecorderService.running) {
+                RecorderService.stop(this)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Démarrage impossible : ${e.message}", Toast.LENGTH_LONG).show()
+        }
+        status.postDelayed({ refreshStatus() }, 500)
     }
 
     private fun askBattery() {

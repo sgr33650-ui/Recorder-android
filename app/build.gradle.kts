@@ -11,8 +11,8 @@ android {
         applicationId = "fr.perso.recorder"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "2.0"
     }
 
     // Clé fixe : chaque nouvelle version peut s'installer par-dessus la précédente.
@@ -24,30 +24,6 @@ android {
             keyPassword = "enregistreur"
             enableV1Signing = true
             enableV2Signing = true
-        }
-    }
-
-    flavorDimensions += "variante"
-    productFlavors {
-        create("complet") {
-            dimension = "variante"
-            resValue("string", "app_name", "Appels Rec")
-        }
-        // Version de test sans aucune permission sensible
-        create("essaia") {
-            dimension = "variante"
-            applicationIdSuffix = ".a"
-            resValue("string", "app_name", "Rec A")
-        }
-        create("essaib") {
-            dimension = "variante"
-            applicationIdSuffix = ".b"
-            resValue("string", "app_name", "Rec B")
-        }
-        create("essaic") {
-            dimension = "variante"
-            applicationIdSuffix = ".c"
-            resValue("string", "app_name", "Rec C")
         }
     }
 

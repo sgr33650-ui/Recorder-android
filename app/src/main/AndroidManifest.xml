@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -31,21 +32,15 @@
             android:launchMode="singleTop"
             android:theme="@android:style/Theme.Material.Light.Dialog" />
 
-        <!-- Service d'accessibilité : détecte les appels et garde l'appli active -->
-        <service
-            android:name=".CallAccessibilityService"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
             <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_config" />
-        </service>
+        </receiver>
 
-        <!-- Service d'enregistrement (premier plan, notification visible) -->
+        <!-- Service permanent : écoute les appels et enregistre (notification visible) -->
         <service
             android:name=".RecorderService"
             android:exported="false"

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_description">Permet de détecter le début et la fin des appels pour les enregistrer automatiquement. Aucune donnée n\'est lue à l\'écran ni envoyée sur Internet.</string>
+    <string name="app_name">Appels Rec</string>
 </resources>

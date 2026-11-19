@@ -87,8 +87,10 @@ class ReviewActivity : Activity() {
         if (rec.screenshot.exists()) {
             val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
             BitmapFactory.decodeFile(rec.screenshot.absolutePath, opts)?.let { view.setImageBitmap(it) }
-        } else if (attempt < 5) {
+        } else if (attempt < 2) {
             view.postDelayed({ loadThumb(view, attempt + 1) }, 600)
+        } else {
+            view.visibility = android.view.View.GONE
         }
     }
 
