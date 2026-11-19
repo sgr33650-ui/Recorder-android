@@ -19,6 +19,14 @@ Chaque modification poussée sur `main` lance une compilation (onglet **Actions*
    - **Économiseur de batterie** : « Aucune restriction »
    - Dans le menu des applis récentes, appui long sur l'appli → 🔒 Verrouiller.
 
+## Liste des appels, horodatage et captures
+
+- Chaque appel apparaît dans l'appli avec **date, heure, sens (entrant/sortant), numéro et durée**. 📷 indique qu'une capture existe.
+- Une **capture d'écran** de l'écran d'appel est prise automatiquement ~1,5 s après le décroché (Android 11 ou plus).
+- Appui long sur un appel : voir la capture, partager audio + capture, supprimer.
+- **Exporter la liste** produit un tableau CSV (Date ; Heure ; Sens ; Numéro ; Durée ; fichiers) à ouvrir dans Excel ou Google Sheets.
+- Après une mise à jour de l'appli, si les captures n'arrivent pas, désactive puis réactive le service d'accessibilité.
+
 ## Limites à connaître
 
 - Depuis Android 10, Android bloque l'enregistrement direct du son de l'appel par les applis tierces. Cette appli passe par le micro avec un service d'accessibilité (même méthode que Cube ACR). **Ta voix est bien captée ; celle de ton interlocuteur peut être faible**, selon le modèle.

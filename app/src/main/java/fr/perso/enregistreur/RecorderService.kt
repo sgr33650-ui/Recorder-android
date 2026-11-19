@@ -13,9 +13,6 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /** Service de premier plan qui enregistre l'audio pendant l'appel. */
 class RecorderService : Service() {
@@ -31,8 +28,8 @@ class RecorderService : Service() {
             ACTION_START -> {
                 goForeground()
                 start(
-                    intent.getStringExtra(EXTRA_DIRECTION) ?: "appel",
-                    intent.getStringExtra(EXTRA_NUMBER) ?: ""
+                    intent.getStringExtra(EXTRA_BASENAME)
+                        ?: Recording.baseName(java.util.Date(), "appel", null)
                 )
             }
             ACTION_STOP -> {
@@ -66,7 +63,7 @@ class RecorderService : Service() {
     }
 
     @Suppress("DEPRECATION")
-    private fun start(direction: String, number: String) {
+    private fun start(base: String) {
         if (recorder != null) return
 
         if (Prefs.speaker(this)) {
@@ -77,9 +74,7 @@ class RecorderService : Service() {
             }
         }
 
-        val stamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.FRANCE).format(Date())
-        val safeNumber = number.replace(Regex("[^0-9+]"), "").ifEmpty { "inconnu" }
-        val out = File(Prefs.folder(this), "${stamp}_${direction}_${safeNumber}.m4a")
+        val out = File(Prefs.folder(this), "$base.m4a")
 
         // Essaie d'abord la source choisie, puis les autres.
         val chosen = Prefs.sourceIndex(this)
@@ -136,8 +131,7 @@ class RecorderService : Service() {
     companion object {
         const val ACTION_START = "fr.perso.enregistreur.START"
         const val ACTION_STOP = "fr.perso.enregistreur.STOP"
-        const val EXTRA_DIRECTION = "direction"
-        const val EXTRA_NUMBER = "number"
+        const val EXTRA_BASENAME = "basename"
         private const val CHANNEL = "enregistrement"
         private const val NOTIF_ID = 42
         private const val TAG = "EnregAppels"

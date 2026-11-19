@@ -29,7 +29,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var sourceBtn: Button
     private lateinit var list: ListView
-    private var files: List<File> = emptyList()
+    private var items: List<Recording> = emptyList()
     private var player: MediaPlayer? = null
     private var playing: File? = null
 
@@ -86,16 +86,21 @@ class MainActivity : Activity() {
         }
         root.addView(sourceBtn)
 
+        root.addView(Button(this).apply {
+            text = "📋 Exporter la liste des appels (tableau CSV)"
+            setOnClickListener { exportCsv() }
+        })
+
         root.addView(TextView(this).apply {
-            text = "Enregistrements (appui : lire/arrêter, appui long : partager/supprimer)"
+            text = "Enregistrements (appui : lire/arrêter, appui long : capture, partage, suppression)"
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, pad, 0, pad / 2)
         })
 
         list = ListView(this)
         root.addView(list, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
-        list.setOnItemClickListener { _, _, pos, _ -> togglePlay(files[pos]) }
-        list.setOnItemLongClickListener { _, _, pos, _ -> actions(files[pos]); true }
+        list.setOnItemClickListener { _, _, pos, _ -> togglePlay(items[pos].audio) }
+        list.setOnItemLongClickListener { _, _, pos, _ -> actions(items[pos]); true }
 
         setContentView(root, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         refreshSource()
@@ -152,14 +157,11 @@ class MainActivity : Activity() {
     }
 
     private fun refreshList() {
-        files = Prefs.folder(this).listFiles()
-            ?.filter { it.isFile }
-            ?.sortedByDescending { it.lastModified() }
-            ?: emptyList()
-        val labels = files.map { f ->
-            val kb = f.length() / 1024
-            val mark = if (f == playing) "▶ " else ""
-            "$mark${f.nameWithoutExtension.replace('_', ' ')}  ($kb Ko)"
+        items = Recording.all(this)
+        val labels = items.map { r ->
+            val mark = if (r.audio == playing) "▶ " else ""
+            val cam = if (r.screenshot.exists()) "  📷" else ""
+            "$mark${r.dateText} à ${r.timeText}\n${r.directionText} · ${r.number} · ${r.durationText}$cam"
         }
         list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
     }
@@ -189,15 +191,19 @@ class MainActivity : Activity() {
         playing = null
     }
 
-    private fun actions(f: File) {
+    private fun uri(f: File): Uri = FileProvider.getUriForFile(this, "$packageName.files", f)
+
+    private fun actions(r: Recording) {
         AlertDialog.Builder(this)
-            .setTitle(f.name)
-            .setItems(arrayOf("Partager", "Supprimer")) { _, which ->
+            .setTitle("${r.dateText} à ${r.timeText} – ${r.number}")
+            .setItems(arrayOf("Voir la capture d'écran", "Partager (audio + capture)", "Supprimer")) { _, which ->
                 when (which) {
-                    0 -> share(f)
-                    1 -> {
-                        if (playing == f) stopPlayer()
-                        f.delete()
+                    0 -> showScreenshot(r)
+                    1 -> share(r)
+                    2 -> {
+                        if (playing == r.audio) stopPlayer()
+                        r.audio.delete()
+                        r.screenshot.delete()
                         refreshList()
                     }
                 }
@@ -205,15 +211,50 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun share(f: File) {
-        val uri = FileProvider.getUriForFile(this, "$packageName.files", f)
+    private fun showScreenshot(r: Recording) {
+        if (!r.screenshot.exists()) {
+            Toast.makeText(this, "Pas de capture pour cet appel", Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri(r.screenshot), "image/jpeg")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        )
+    }
+
+    private fun share(r: Recording) {
+        val uris = arrayListOf(uri(r.audio))
+        if (r.screenshot.exists()) uris.add(uri(r.screenshot))
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND_MULTIPLE)
+                    .setType("*/*")
+                    .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                    .putExtra(Intent.EXTRA_TEXT,
+                        "Appel ${r.direction} – ${r.number} – ${r.dateText} à ${r.timeText} – ${r.durationText}")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                "Partager l'appel"
+            )
+        )
+    }
+
+    private fun exportCsv() {
+        val list = Recording.all(this)
+        if (list.isEmpty()) {
+            Toast.makeText(this, "Aucun enregistrement", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val csv = File(Prefs.folder(this), "liste_appels.csv")
+        // BOM UTF-8 pour qu'Excel affiche correctement les accents
+        csv.writeText("\uFEFF" + Recording.toCsv(list))
         startActivity(
             Intent.createChooser(
                 Intent(Intent.ACTION_SEND)
-                    .setType("audio/mp4")
-                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .setType("text/csv")
+                    .putExtra(Intent.EXTRA_STREAM, uri(csv))
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
-                "Partager l'enregistrement"
+                "Exporter la liste des appels"
             )
         )
     }
