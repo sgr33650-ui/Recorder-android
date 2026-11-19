@@ -34,10 +34,20 @@ android {
             resValue("string", "app_name", "Appels Rec")
         }
         // Version de test sans aucune permission sensible
-        create("essai") {
+        create("essaia") {
             dimension = "variante"
-            applicationIdSuffix = ".essai"
-            resValue("string", "app_name", "Test install")
+            applicationIdSuffix = ".a"
+            resValue("string", "app_name", "Rec A")
+        }
+        create("essaib") {
+            dimension = "variante"
+            applicationIdSuffix = ".b"
+            resValue("string", "app_name", "Rec B")
+        }
+        create("essaic") {
+            dimension = "variante"
+            applicationIdSuffix = ".c"
+            resValue("string", "app_name", "Rec C")
         }
     }
 
