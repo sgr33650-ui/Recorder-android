@@ -28,7 +28,8 @@ jobs:
 
       - name: Renommer l'APK
         run: |
-          cp app/build/outputs/apk/release/app-release.apk AppelsRec.apk
+          cp app/build/outputs/apk/simple/release/app-simple-release.apk AppelsRec.apk
+          cp app/build/outputs/apk/complet/release/app-complet-release.apk AppelsRec-Complet.apk
 
       - name: Vérifier l'APK
         run: |
@@ -40,13 +41,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: AppelsRec
-          path: AppelsRec.apk
+          path: AppelsRec*.apk
 
       - name: Publier dans « Releases »
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete derniere-version --yes --cleanup-tag || true
-          gh release create derniere-version AppelsRec.apk \
+          gh release create derniere-version AppelsRec.apk AppelsRec-Complet.apk \
             --title "Dernière version" \
             --notes "APK compilé automatiquement depuis ${GITHUB_SHA::7}."

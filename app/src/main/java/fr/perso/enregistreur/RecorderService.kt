@@ -128,6 +128,9 @@ class RecorderService : Service() {
                 file = out
                 goForeground("🔴 Appel en cours d'enregistrement", Prefs.SOURCES[idx].second)
                 Journal.log(this, "Enregistrement démarré, source : ${Prefs.SOURCES[idx].second}")
+                Screenshotter.take?.let { take ->
+                    android.os.Handler(mainLooper).postDelayed({ take(base) }, 1500)
+                }
                 return
             } catch (e: Exception) {
                 Journal.log(this, "Source refusée : ${Prefs.SOURCES[idx].second}", e)

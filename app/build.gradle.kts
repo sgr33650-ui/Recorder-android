@@ -11,8 +11,8 @@ android {
         applicationId = "fr.perso.recorder"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "2.3"
+        versionCode = 9
+        versionName = "3.0"
     }
 
     // Clé fixe : chaque nouvelle version peut s'installer par-dessus la précédente.
@@ -24,6 +24,20 @@ android {
             keyPassword = "enregistreur"
             enableV1Signing = true
             enableV2Signing = true
+        }
+    }
+
+    flavorDimensions += "variante"
+    productFlavors {
+        // Installable normalement, mais son coupé pendant les appels
+        create("simple") {
+            dimension = "variante"
+            resValue("bool", "has_accessibility", "false")
+        }
+        // Avec accessibilité : à installer via Shizuku/SAI ou ADB
+        create("complet") {
+            dimension = "variante"
+            resValue("bool", "has_accessibility", "true")
         }
     }
 

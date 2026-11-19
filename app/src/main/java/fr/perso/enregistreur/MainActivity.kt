@@ -56,6 +56,12 @@ class MainActivity : Activity() {
             text = "1. Autoriser les permissions"
             setOnClickListener { requestPermissions(permissions, 1) }
         })
+        if (resources.getBoolean(R.bool.has_accessibility)) {
+            root.addView(Button(this).apply {
+                text = "Activer l'accessibilité (son des appels + capture)"
+                setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            })
+        }
         root.addView(Button(this).apply {
             text = "2. Désactiver l'optimisation batterie"
             setOnClickListener { askBattery() }
@@ -160,6 +166,13 @@ class MainActivity : Activity() {
         status.text = buildString {
             append(if (perms) "✅ Permissions accordées\n" else "❌ Permissions manquantes\n")
             append(if (RecorderService.running) "✅ Surveillance des appels active" else "❌ Surveillance arrêtée")
+            if (resources.getBoolean(R.bool.has_accessibility)) {
+                val on = (Settings.Secure.getString(contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: "").contains(packageName)
+                append(if (on) "\n✅ Accessibilité active" else "\n❌ Accessibilité inactive (le son des appels sera coupé)")
+            } else {
+                append("\nℹ️ Version simple : Android coupe le son pendant les appels")
+            }
             if (perms && RecorderService.running) append("\n\nPrêt : les prochains appels seront enregistrés.")
         }
     }
@@ -234,7 +247,8 @@ class MainActivity : Activity() {
         }
         for (r in items) {
             listBox.addView(TextView(this).apply {
-                text = "▶  ${r.dateText} à ${r.timeText}\n     ${r.directionText} · ${r.number} · ${r.durationText}"
+                text = "▶  ${r.dateText} à ${r.timeText}\n     ${r.directionText} · ${r.number} · ${r.durationText}" +
+                    (if (r.screenshot.exists()) "  📷" else "")
                 textSize = 15f
                 setPadding(pad / 2, pad, pad / 2, pad)
                 setBackgroundResource(android.R.drawable.list_selector_background)
@@ -276,12 +290,13 @@ class MainActivity : Activity() {
     private fun actions(r: Recording) {
         AlertDialog.Builder(this)
             .setTitle("${r.dateText} à ${r.timeText} – ${r.number}")
-            .setItems(arrayOf("Écouter", "Ouvrir avec une autre appli", "Partager", "Supprimer")) { _, which ->
+            .setItems(arrayOf("Écouter", "Ouvrir avec une autre appli", "Voir la capture d'écran", "Partager", "Supprimer")) { _, which ->
                 when (which) {
                     0 -> playerDialog(r)
                     1 -> openWith(r)
-                    2 -> share(r)
-                    3 -> confirmDelete(r)
+                    2 -> showScreenshot(r)
+                    3 -> share(r)
+                    4 -> confirmDelete(r)
                 }
             }
             .show()
@@ -299,6 +314,18 @@ class MainActivity : Activity() {
                 refreshList()
             }
             .show()
+    }
+
+    private fun showScreenshot(r: Recording) {
+        if (!r.screenshot.exists()) {
+            Toast.makeText(this, "Pas de capture pour cet appel", Toast.LENGTH_SHORT).show()
+            return
+        }
+        startActivity(
+            Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri(r.screenshot), "image/jpeg")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        )
     }
 
     private fun openWith(r: Recording) {

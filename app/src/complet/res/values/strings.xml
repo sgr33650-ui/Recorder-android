@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_description">Permet à Appels Rec de capter le son pendant les appels et de prendre une capture de l\'écran d\'appel. Aucune donnée n\'est lue à l\'écran ni envoyée sur Internet.</string>
+</resources>
