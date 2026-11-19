@@ -15,9 +15,23 @@ android {
         versionName = "1.0"
     }
 
+    // Clé fixe : chaque nouvelle version peut s'installer par-dessus la précédente.
+    signingConfigs {
+        create("perso") {
+            storeFile = file("signature.jks")
+            storePassword = "enregistreur"
+            keyAlias = "enregistreur"
+            keyPassword = "enregistreur"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("perso")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("perso")
         }
     }
 
