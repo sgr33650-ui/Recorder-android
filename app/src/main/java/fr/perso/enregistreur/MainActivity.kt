@@ -14,10 +14,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
-import android.widget.ListView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -29,7 +27,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var journal: TextView
     private lateinit var sourceBtn: Button
-    private lateinit var list: ListView
+    private lateinit var listBox: LinearLayout
     private var items: List<Recording> = emptyList()
     private var player: MediaPlayer? = null
     private var playing: File? = null
@@ -126,17 +124,16 @@ class MainActivity : Activity() {
         root.addView(jrow)
 
         root.addView(TextView(this).apply {
-            text = "Enregistrements (appui : lire/arrêter, appui long : partage, suppression)"
+            text = "Enregistrements (appui : écouter · appui long : partager, supprimer)"
             setTypeface(typeface, Typeface.BOLD)
             setPadding(0, pad, 0, pad / 2)
         })
 
-        list = ListView(this)
-        root.addView(list, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
-        list.setOnItemClickListener { _, _, pos, _ -> togglePlay(items[pos].audio) }
-        list.setOnItemLongClickListener { _, _, pos, _ -> actions(items[pos]); true }
+        listBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(listBox)
 
-        setContentView(root, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        // Tout l'écran défile : la liste reste accessible même avec beaucoup de réglages.
+        setContentView(android.widget.ScrollView(this).apply { addView(root) })
         refreshSource()
     }
 
@@ -230,12 +227,23 @@ class MainActivity : Activity() {
 
     private fun refreshList() {
         items = Recording.all(this)
-        val labels = items.map { r ->
-            val mark = if (r.audio == playing) "▶ " else ""
-            val cam = if (r.screenshot.exists()) "  📷" else ""
-            "$mark${r.dateText} à ${r.timeText}\n${r.directionText} · ${r.number} · ${r.durationText}$cam"
+        listBox.removeAllViews()
+        val pad = (12 * resources.displayMetrics.density).toInt()
+        if (items.isEmpty()) {
+            listBox.addView(TextView(this).apply { text = "Aucun enregistrement pour l'instant." })
         }
-        list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
+        for (r in items) {
+            listBox.addView(TextView(this).apply {
+                text = "▶  ${r.dateText} à ${r.timeText}\n     ${r.directionText} · ${r.number} · ${r.durationText}"
+                textSize = 15f
+                setPadding(pad / 2, pad, pad / 2, pad)
+                setBackgroundResource(android.R.drawable.list_selector_background)
+                setOnClickListener { playerDialog(r) }
+                setOnLongClickListener { actions(r); true }
+            })
+            listBox.addView(android.view.View(this).apply { setBackgroundColor(0x22000000) },
+                LinearLayout.LayoutParams(MATCH_PARENT, 1))
+        }
     }
 
     private fun togglePlay(f: File) {
@@ -268,31 +276,100 @@ class MainActivity : Activity() {
     private fun actions(r: Recording) {
         AlertDialog.Builder(this)
             .setTitle("${r.dateText} à ${r.timeText} – ${r.number}")
-            .setItems(arrayOf("Voir la capture d'écran", "Partager (audio + capture)", "Supprimer")) { _, which ->
+            .setItems(arrayOf("Écouter", "Ouvrir avec une autre appli", "Partager", "Supprimer")) { _, which ->
                 when (which) {
-                    0 -> showScreenshot(r)
-                    1 -> share(r)
-                    2 -> {
-                        if (playing == r.audio) stopPlayer()
-                        r.audio.delete()
-                        r.screenshot.delete()
-                        refreshList()
-                    }
+                    0 -> playerDialog(r)
+                    1 -> openWith(r)
+                    2 -> share(r)
+                    3 -> confirmDelete(r)
                 }
             }
             .show()
     }
 
-    private fun showScreenshot(r: Recording) {
-        if (!r.screenshot.exists()) {
-            Toast.makeText(this, "Pas de capture pour cet appel", Toast.LENGTH_SHORT).show()
+    private fun confirmDelete(r: Recording) {
+        AlertDialog.Builder(this)
+            .setTitle("Supprimer définitivement ?")
+            .setMessage("${r.dateText} à ${r.timeText} – ${r.number}\nCette action est irréversible.")
+            .setNegativeButton("Annuler", null)
+            .setPositiveButton("Oui, supprimer") { _, _ ->
+                if (playing == r.audio) stopPlayer()
+                r.audio.delete()
+                r.screenshot.delete()
+                refreshList()
+            }
+            .show()
+    }
+
+    private fun openWith(r: Recording) {
+        try {
+            startActivity(Intent.createChooser(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri(r.audio), "audio/mp4")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                "Écouter avec…"))
+        } catch (e: Exception) {
+            Journal.log(this, "Ouverture externe impossible", e)
+            Toast.makeText(this, "Aucune appli pour lire ce fichier", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** Petit lecteur : lecture/pause, position, ouvrir ailleurs. */
+    private fun playerDialog(r: Recording) {
+        stopPlayer()
+        val mp = MediaPlayer()
+        try {
+            mp.setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            mp.setDataSource(r.audio.absolutePath)
+            mp.prepare()
+        } catch (e: Exception) {
+            mp.release()
+            Journal.log(this, "Lecture impossible : ${r.audio.name} (${r.audio.length() / 1024} Ko)", e)
+            journal.text = Journal.read(this)
+            AlertDialog.Builder(this)
+                .setTitle("Lecture impossible ici")
+                .setMessage("Essayer avec une autre appli (lecteur de musique, VLC…) ?")
+                .setPositiveButton("Ouvrir avec…") { _, _ -> openWith(r) }
+                .setNegativeButton("Fermer", null)
+                .show()
             return
         }
-        startActivity(
-            Intent(Intent.ACTION_VIEW)
-                .setDataAndType(uri(r.screenshot), "image/jpeg")
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        )
+        player = mp
+        playing = r.audio
+        fun fmt(ms: Int) = "%d:%02d".format(ms / 60000, (ms / 1000) % 60)
+        val info = TextView(this).apply {
+            textSize = 18f
+            val p = (20 * resources.displayMetrics.density).toInt()
+            setPadding(p, p, p, p)
+        }
+        val tick = object : Runnable {
+            override fun run() {
+                val cur = player ?: return
+                info.text = "${if (cur.isPlaying) "▶ Lecture" else "⏸ Pause"}   ${fmt(cur.currentPosition)} / ${fmt(cur.duration)}" +
+                    "\n\nMonte le volume « Média » si tu n'entends rien."
+                info.postDelayed(this, 500)
+            }
+        }
+        val dlg = AlertDialog.Builder(this)
+            .setTitle("${r.dateText} à ${r.timeText} – ${r.number}")
+            .setView(info)
+            .setPositiveButton("Fermer", null)
+            .setNeutralButton("Ouvrir avec…") { _, _ -> stopPlayer(); openWith(r) }
+            .setNegativeButton("Pause / Lecture", null)
+            .setOnDismissListener { stopPlayer() }
+            .create()
+        dlg.show()
+        dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+            player?.let { if (it.isPlaying) it.pause() else it.start() }
+        }
+        mp.setOnCompletionListener { it.seekTo(0) }
+        mp.start()
+        info.post(tick)
     }
 
     private fun share(r: Recording) {

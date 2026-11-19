@@ -120,7 +120,7 @@ class ReviewActivity : Activity() {
     private fun confirmDelete() {
         AlertDialog.Builder(this)
             .setTitle("Supprimer définitivement ?")
-            .setMessage("L'enregistrement audio et la capture d'écran de cet appel seront effacés. Cette action est irréversible.")
+            .setMessage("L'enregistrement de cet appel sera effacé. Cette action est irréversible.")
             .setNegativeButton("Annuler", null)
             .setPositiveButton("Oui, supprimer") { _, _ ->
                 stopPlayer()
